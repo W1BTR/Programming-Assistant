@@ -3,10 +3,10 @@ mode con: cols=49 lines=30
 title Programming Assistant
 setlocal EnableDelayedExpansion
 echo Loading . . .
-Set PAVer=0.1.2
+Set PAVer=0.1.3
 set autostart=on
+set dontdisplaytrs=FALSE
 if exist Bin\Settings.cmd call Bin\Settings.cmd
-echo here
 if %autostart%==on (
 	call Bin\CMDS.bat /ts "Prog Assistant COM Companion"
 	if !errorlevel!==1 cscript //B //Nologo "Bin\CMS.vbs"
@@ -282,7 +282,7 @@ set item=0
 set _skip=0
 cls
 call :titlebar
-for /f "tokens=*" %%A in ('dir /b !directory!') do (
+for /f "tokens=*" %%A in ('dir /b "!directory!"') do (
 	set /a linecount+=1
 	set /a item+=1
 	set _echo=%%~nA
@@ -364,7 +364,7 @@ if exist "%directory%\%_SelectedFile%\*" (
 )
 set Radio="%Directory%\%_SelectedFile%"
 :LoadRadio
-call "%radio%"
+call %radio%
 call :SetLC
 call :setVC
 Rem If path longer than 27 char, trim and append ...
@@ -373,7 +373,6 @@ for /l %%A in (12,-1,0) do (
     set /a "len|=1<<%%A"
     for %%B in (!len!) do if "!SoftwarePath:~%%B,1!"=="" set /a "len&=~1<<%%A"
 )
-echo !len!
 set /a "startPos=!len!-25"
 if !len! gtr 27 (
     set "DisplayPath=...!SoftwarePath:~%startPos%,26!"
@@ -1007,6 +1006,36 @@ exit /b
 	echo 3.5mm TRS, 3.5mm TRRS, 2.5mm TRS, 2.5mm TRRS
 	echo.
 	set /p jack=">"
+	set istrs=yes
+	set istrrs=yes
+	if "!jack!"=="!jack:TRS=!" (
+		if "!jack!"=="!jack:trs=!" (
+			set istrs=no
+		)
+	)
+	if "!jack!"=="!jack:TRRS=!" (
+		if "!jack!"=="!jack:trrs=!" (
+			set istrrs=no
+		)
+	)
+	if "!istrs!"=="yes" (
+		if not "%dontdisplaytrs%"=="TRUE" (
+			echo LOADING GUIDE...[107;30m
+			cls
+			type Bin\TRS.ascii
+			echo.[0m
+			pause
+		)
+	)
+	if "!istrrs!"=="yes" (
+		if not "%dontdisplaytrs%"=="TRUE" (
+			echo LOADING GUIDE...[107;30m
+			cls
+			type Bin\TRRS.ascii
+			echo.[0m
+			pause
+		)
+	)
 exit /b
 
 
@@ -1071,7 +1100,7 @@ REM ==========================================
 
 :SaveRadio
 cls
-echo Saving [96m%vendor% %model% . . .
+echo Saving [96m%vendor% %model% . . .[90m
 if not exist "Bin\Files\Radios\%vendor%\" md "Bin\Files\Radios\%vendor%\"
 if exist "Bin\Files\Radios\%vendor%\%model%.cmd" (
 	echo [91mThere is already a save file for:
@@ -1081,6 +1110,7 @@ if exist "Bin\Files\Radios\%vendor%\%model%.cmd" (
 	if %errorlevel%==2 goto mainmenu
 )
 rem set unique identifiers of programing cable and software
+echo Generating Radio File . . .
 set uid=%jack%%txd%%rxd%%gnd%%voltage%
 set uid2=%jack%%txd%%rxd%%gnd%%voltage%%software%
 rem create a callable file with all the variables
@@ -1101,10 +1131,12 @@ echo set softwarepath=%softwarepath%>>"Bin\Files\Radios\%vendor%\%model%.cmd"
 (echo set uid=%uid%)>>"Bin\Files\Radios\%vendor%\%model%.cmd"
 (echo set uid2=%uid2%)>>"Bin\Files\Radios\%vendor%\%model%.cmd"
 rem save UID and UID2 for looking up compatible radios. If a UID DB doesnt exist matching the uid, creatge one.
+echo Generating UID Files . . .
 for /f "tokens=* delims=*" %%A in ('dir /b /s "%vendor%.%model%.uid1"') do (if exist "%%~A" del /f /q "%%~A")
 for /f "tokens=* delims=*" %%A in ('dir /b /s "%vendor%.%model%.uid2"') do (if exist "%%~A" del /f /q "%%~A")
 if not exist "Bin\Files\UIDS\%uid%\" md "Bin\Files\UIDS\%uid%\"
 if not exist "Bin\Files\UID2S\%uid2%\" md "Bin\Files\UID2S\%uid2%\"
+echo Saving UID Files . . .
 echo [%vendor%\%model%]>"Bin\Files\UIDS\%uid%\%vendor%.%model%.uid1"
 echo [%vendor%\%model%]>"Bin\Files\UID2S\%uid2%\%vendor%.%model%.uid2"
 echo.
