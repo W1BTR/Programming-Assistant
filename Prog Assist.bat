@@ -32,6 +32,7 @@ exit /b
 
 :mainmenu
 cls
+echo =================================================[0;7m
 call :Menutitlebar
 if exist Bin\logo.ascii (
     type Bin\logo.ascii
@@ -42,7 +43,7 @@ echo 1] View Radio
 echo 2] New Radio
 echo 3] COM Ports
 echo [90mS] Settings
-echo U] Updates
+echo U] Update Vendors, Radios, ^& Cables Online
 echo X] Exit[0m
 "Bin\kbd.exe"
 if %errorlevel%==49 goto ViewRadio
@@ -58,6 +59,68 @@ if %errorlevel%==115 goto settings
 if %errorlevel%==52 goto settings
 if %errorlevel%==117 goto updates
 if %errorlevel%==68 exit /b
+goto mainmenu
+
+
+:updates
+:UpdateLibrary
+cls
+if exist Bin\logo.ascii (
+    type Bin\logo.ascii
+	echo.
+)
+echo [0;96m=================================================[0m
+set owner=W1BTR
+set Didupdate=No
+set repo=Programming-Assistant
+echo [90mChecking repository for new vendors and radios...[93m
+:: Get the JSON data from GitHub API and save it to a temporary file
+curl -s -H "Accept: application/vnd.github.v3.raw" -L https://api.github.com/repos/%OWNER%/%REPO%/contents/Bin/Files/Vendors > temp.json
+:: Use PowerShell to parse the JSON and output the names
+for /f "delims=" %%i in ('powershell -Command "Get-Content temp.json | ConvertFrom-Json | ForEach-Object { $_.name }"') do (
+    if not exist "Bin\Files\Vendors\%%~i" (
+        echo. > "Bin\Files\Vendors\%%~i"
+        echo Added new Vendor: %%~i
+		set Didupdate=Yes
+    )
+    set Vendor=%%~i
+    set VendorURL=!Vendor: =%%20!
+    curl -s -H "Accept: application/vnd.github.v3.raw" -L https://api.github.com/repos/%OWNER%/%REPO%/contents/Bin/Files/Radios/!VendorURL! > "vendortemp.json"
+    for /f "delims=" %%l in ('powershell -Command "Get-Content vendortemp.json | ConvertFrom-Json | ForEach-Object { $_.name }"') do (
+        if not exist "Bin\Files\Radios\!Vendor!\%%~l" (
+            if not exist "Bin\Files\Radios\!vendor!" md "Bin\Files\Radios\!vendor!\"
+            set Radio=%%~l
+            set Radio=!Radio: =%%20!
+            curl -# -H "Accept: application/vnd.github.v3.raw" -L https://api.github.com/repos/%OWNER%/%REPO%/contents/Bin/Files/Radios/!vendorURL!/!Radio! -o "Bin\Files\Radios\!vendor!\%%~l"
+			echo Added New Radio: %%~nl
+			set Didupdate=Yes
+        )
+    )
+)
+
+echo [90mChecking repository for new cables...[93m
+del /f /q vendortemp.json
+curl -s -H "Accept: application/vnd.github.v3.raw" -L https://api.github.com/repos/%OWNER%/%REPO%/contents/Bin/Files/Cables > temp.json
+for /f "delims=" %%l in ('powershell -Command "Get-Content temp.json | ConvertFrom-Json | ForEach-Object { $_.name }"') do (
+    if /i not "%%~l"=="Owned" (
+        if not exist "Bin\Files\Cables\%%~l" (
+            set CableURL=%%~l
+            set CableURL=!CableURL: =%%20!
+            curl -# -H "Accept: application/vnd.github.v3.raw" -L https://api.github.com/repos/%OWNER%/%REPO%/contents/Bin/Files/Cables/!CableURL! -o "Bin\Files\Cables\%%~l"
+            echo Added New Cable: %%~nl
+			set Didupdate=Yes
+        )
+    )
+
+)
+:: Clean up temporary file
+del temp.json
+if %didupdate%==Yes (
+	echo [92mUpdates Installed.[0m
+) ELSE (
+	echo [92mLibrary was up to date.[0m
+)
+pause
 goto mainmenu
 
 
@@ -410,7 +473,12 @@ set mismatch=N
 if exist "Bin\Files\Cables\Owned\%Cable%.cmd" (
 	echo Owned?[32m              Cable Owned[0m
 ) ELSE (
-	echo Owned?[31m              Cable Not Owned[0m
+	if exist "Bin\Files\Cables\%Cable%.cmd" (
+		echo Owned?[31m              Cable Not Owned[0m
+	) ELSE (
+		echo Owned?[31m              Cable Unknown[0m
+	)
+	
 )
 echo [90m-------------------------------------------------[0m
 echo Software:           [96m%Software%[0m
@@ -597,7 +665,7 @@ if exist "Bin\Files\Cables\%Cable%.cmd" (
 		if exist "Bin\Files\Cables\Owned\%Cable%.cmd" (
 			echo C Owned?[32m              Cable Owned[0m
 		) ELSE (
-			echo C[31m Cable Unowned[90m Press C to add to Owned library[0m
+			echo C[31m Cable Unowned[90m Press C to mark as owned[0m
 		)
 	)
 ) ELSE (
@@ -714,10 +782,19 @@ goto Confignewmenu
 
 
 :SaveCable
+if %mismatch%==N (
+	if exist "Bin\Files\Cables\%cable%.cmd" (
+		echo [92mCable exists but is marked as unowned.[0m
+		goto DoYouOwn
+	) ELSE (
+		echo [92mAdding new cable to library[0m
+	)
+) ELSE (
+	echo [91mCable Mismatch[0m
+)
 if not exist "Bin\Files\Cables\Owned\" md "Bin\Files\Cables\Owned\"
 if %mismatch%==Y call :updatecable
 if %mismatch%==Y exit /b
-echo Editing %cable%
 echo Ensure the pins are set up properly
 echo [97mbefore[0m saving the cable.
 echo.
@@ -735,6 +812,7 @@ if %errorlevel%==2 exit /b
 (Echo set CableGND=%GND%)>>"Bin\Files\Cables\%Cable%.cmd"
 (Echo set CableV=%voltage%)>>"Bin\Files\Cables\%Cable%.cmd"
 echo [92mCable Saved.[0m
+:DoYouOwn
 echo Do you own this cable?
 choice
 if %errorlevel%==1 (
