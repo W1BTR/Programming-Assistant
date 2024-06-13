@@ -5,3 +5,5 @@ Bin/RecentCOM.log
 Bin/COMLOG.diff
 Bin/COMLOG.log
 Bin/Files/*.custom.cmd
+Bin/Files/Cables/Owned/*.*
+Bin/Files/Cables/Owned/*

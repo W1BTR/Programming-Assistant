@@ -585,8 +585,8 @@ echo %cur_4%4 GND:                [92m%GND%[0m
 echo %cur_5%5 Voltage:            %VC%%VOLTAGE%[0m
 echo %cur_6%6 Cable Name:         %cable%[0m
 set mismatch=N
-if exist "Bin\Files\Cables\Owned\%Cable%.cmd" (
-	call "Bin\Files\Cables\Owned\%Cable%.cmd"
+if exist "Bin\Files\Cables\%Cable%.cmd" (
+	call "Bin\Files\Cables\%Cable%.cmd"
 	if not "%TXD%"=="!CableTXD!" set mismatch=Y
 	if not "%RXD%"=="!CableRXD!" set mismatch=Y
 	if not "%GND%"=="!CableGND!" set mismatch=Y
@@ -594,10 +594,14 @@ if exist "Bin\Files\Cables\Owned\%Cable%.cmd" (
 	if "!mismatch!"=="Y" (
 		echo C Owned?[33m              Cable mismatch[90m PRESS C
 	) ELSE (
-		echo C Owned?[32m              Cable Owned[0m
+		if exist "Bin\Files\Cables\Owned\%Cable%.cmd" (
+			echo C Owned?[32m              Cable Owned[0m
+		) ELSE (
+			echo C[31m Cable Unowned[90m Press C to add to Owned library[0m
+		)
 	)
 ) ELSE (
-	echo C[31m Cable Not Owned[90m Press C to add to owned library[0m
+	echo C[31m Cable Unknown[90m Press C to add to library[0m
 )
 echo [90m== Software =====================================[0m
 echo %cur_7%7 Software:           [97m%Software%[0m
@@ -713,6 +717,7 @@ goto Confignewmenu
 if not exist "Bin\Files\Cables\Owned\" md "Bin\Files\Cables\Owned\"
 if %mismatch%==Y call :updatecable
 if %mismatch%==Y exit /b
+echo Editing %cable%
 echo Ensure the pins are set up properly
 echo [97mbefore[0m saving the cable.
 echo.
@@ -724,12 +729,24 @@ echo.
 echo Save?
 choice
 if %errorlevel%==2 exit /b
-(echo @echo off)>"Bin\Files\Cables\Owned\%Cable%.cmd"
-(Echo set CableTXD=%TXD%)>>"Bin\Files\Cables\Owned\%Cable%.cmd"
-(Echo set CableRXD=%RXD%)>>"Bin\Files\Cables\Owned\%Cable%.cmd"
-(Echo set CableGND=%GND%)>>"Bin\Files\Cables\Owned\%Cable%.cmd"
-(Echo set CableV=%voltage%)>>"Bin\Files\Cables\Owned\%Cable%.cmd"
+(echo @echo off)>"Bin\Files\Cables\%Cable%.cmd"
+(Echo set CableTXD=%TXD%)>>"Bin\Files\Cables\%Cable%.cmd"
+(Echo set CableRXD=%RXD%)>>"Bin\Files\Cables\%Cable%.cmd"
+(Echo set CableGND=%GND%)>>"Bin\Files\Cables\%Cable%.cmd"
+(Echo set CableV=%voltage%)>>"Bin\Files\Cables\%Cable%.cmd"
 echo [92mCable Saved.[0m
+echo Do you own this cable?
+choice
+if %errorlevel%==1 (
+	(Echo.)>>"Bin\Files\Cables\Owned\%Cable%.cmd"
+	echo [92mCable added to owned Library.[0m
+) ELSE (
+	if exist "Bin\Files\Cables\Owned\%Cable%.cmd" (
+		del /f /q "Bin\Files\Cables\Owned\%Cable%.cmd"
+		echo [92mCable removed from owned Library.[0m
+	)
+)
+
 pause
 exit /b
 
@@ -774,11 +791,11 @@ echo 3] Change cable name
 echo X] Go back
 choice /c 1234x
 if %errorlevel%==1 (
-	(echo @echo off)>"Bin\Files\Cables\Owned\%Cable%.cmd"
-	(Echo set CableTXD=%TXD%)>>"Bin\Files\Cables\Owned\%Cable%.cmd"
-	(Echo set CableRXD=%RXD%)>>"Bin\Files\Cables\Owned\%Cable%.cmd"
-	(Echo set CableGND=%GND%)>>"Bin\Files\Cables\Owned\%Cable%.cmd"
-	(Echo set CableV=%voltage%)>>"Bin\Files\Cables\Owned\%Cable%.cmd"
+	(echo @echo off)>"Bin\Files\Cables\%Cable%.cmd"
+	(Echo set CableTXD=%TXD%)>>"Bin\Files\Cables\%Cable%.cmd"
+	(Echo set CableRXD=%RXD%)>>"Bin\Files\Cables\%Cable%.cmd"
+	(Echo set CableGND=%GND%)>>"Bin\Files\Cables\%Cable%.cmd"
+	(Echo set CableV=%voltage%)>>"Bin\Files\Cables\%Cable%.cmd"
 	echo [92mCable Saved.[0m
 	pause
 	exit /b
@@ -818,8 +835,8 @@ exit /b
 :SetCable
 echo Enter name of a cable (i.e. Kenwood KPG-46X):
 set /p cable=">"
-if exist "Bin\Files\Cables\Owned\%Cable%.cmd" (
-	call "Bin\Files\Cables\Owned\%Cable%.cmd"
+if exist "Bin\Files\Cables\%Cable%.cmd" (
+	call "Bin\Files\Cables\%Cable%.cmd"
 	if "%TXD%"=="" set TXD=!CableTXD!
 	if "%RXD%"=="" set RXD=!CableRXD!
 	if "%GND%"=="" set GND=!CAbleGND!
