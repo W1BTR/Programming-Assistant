@@ -3,7 +3,7 @@ mode con: cols=49 lines=30
 title Programming Assistant
 setlocal EnableDelayedExpansion
 echo Loading . . .
-Set PAVer=0.1.3
+Set version=Release-1.6
 set autostart=on
 set dontdisplaytrs=FALSE
 if exist Bin\Settings.cmd call Bin\Settings.cmd
@@ -12,11 +12,11 @@ if %autostart%==on (
 	if !errorlevel!==1 cscript //B //Nologo "Bin\CMS.vbs"
 )
 REM TODO
-rem 3. Add Updates and Update Checking
 rem 4. add auto github check on new vendor model
-rem 5. Options menu
-rem 	- Enable / Disable COM Companion Auto Launch
-rem		
+
+ping github.com -n 1 >nul 2>nul
+if %errorlevel%==0 call :CheckForUpdates
+:CancelUpdate
 set lines=10
 goto mainmenu
 
@@ -60,9 +60,24 @@ if %errorlevel%==117 goto updates
 if %errorlevel%==68 exit /b
 goto mainmenu
 
-:updates
+
+:CheckForUpdates
+set OWNER=W1BTR
+set REPO=Programming-Assistant
+curl -s -H "Accept: application/vnd.github.v3+json" -L https://api.github.com/repos/%OWNER%/%REPO%/releases/latest | find /i "%version%" >nul 2>nul
+if %errorlevel%==0 exit /b
 cls
-echo Checking for Software Update . . .
+echo [95mAn Update is Available.[90m
+curl -s -H "Accept: application/vnd.github.v3.raw" -L https://api.github.com/repos/%OWNER%/%REPO%/contents/Bin/Release.bat -o Release.bat
+call Release.bat Info
+echo [0mRun Update now?[0m
+choice
+if %errorlevel%==2 goto CancelUpdate
+echo Installing update . . .
+call Release.bat Install
+echo Update failed.
+pause
+goto CancelUpdate
 
 
 :settings
