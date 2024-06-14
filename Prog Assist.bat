@@ -111,8 +111,8 @@ for /f "delims=" %%l in ('powershell -Command "Get-Content temp.json | ConvertFr
 			set Didupdate=Yes
         )
     )
-
 )
+
 :: Clean up temporary file
 del temp.json
 if %didupdate%==Yes (
@@ -622,6 +622,29 @@ echo Vendor: [7m%Vendor%[0m
 echo ===========================
 echo Enter new Model Number
 set /p Model=">"
+set VendorURL=!vendor: =%%20!
+set ModelURL=!Model: =%%20!
+curl -s -H "Accept: application/vnd.github.v3.raw" -L https://api.github.com/repos/W1BTR/Programming-Assistant/contents/Bin/Files/Radios/!VendorURL!/!ModelURL! -o ModelCheck.Temp.cmd
+find "https://docs.github.com/rest/repos/contents#get-repository-content" >nul 2>nul
+if %errorlevel%==0 (
+	call ModelCheck.Temp.cmd
+	echo [7mA matching model name was found on the online repository with the following details:[0m
+	echo Vendor:      !vendor!
+	echo Model:       !model!
+	echo Jack:        !jack!
+	echo TXD:         !txd!
+	echo RXD:         !rxd!
+	echo GND:         !gnd!
+	echo Voltage:     !voltage!
+	echo Software:    !software!
+	echo Cable:       !cable!
+	echo Notes:       !notes!
+	echo [92mDownload Model?[0m
+	choice
+	if %errorlevel%==2 goto CONFIGNEW
+	copy "ModelCheck.Temp.cmd" "Bin\Files\Radios\%vendor%\%model%.cmd"
+
+)
 goto CONFIGNEW
 
 :CONFIGNEW
